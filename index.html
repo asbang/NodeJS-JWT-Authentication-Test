@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.5.1/axios.min.js" integrity="sha512-emSwuKiMyYedRwflbZB2ghzX8Cw8fmNVgZ6yQNNXXagFzFOaQmbvQ1vmDkddHjm5AITcBIZfC7k4ShQSjgPAmQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <div class="container-fluid">
+
+        <h1 class="row">Login</h1>
+
+        <main>
+            <div class="row">
+                <label for="password">Username</label>
+                <input type="username" name="username" id="username">
+            </div>
+
+            <div class="row">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password">
+            </div>
+            
+            <div class="buttons">
+                <button onclick="login()" class="btn" id="login">Login</button>
+                <button onclick="getDashboard()" class="btn" id="dashboard">Get Dashboard</button>
+                <button onclick="getSettings()" class="btn" id="settings">Get Settings</button>
+            </div>
+        </main>
+    </div>
+
+
+    <script>
+        function login(){
+            const data = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+            };
+            axios.post('/api/login', data)
+                .then(res => {
+                    console.log(res);
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                    if (res && res.data && res.data.success) {
+                        const token = res.data.token;
+                        localStorage.setItem('jwt', token);
+                        if (officialError.message === 'jwt expired'){
+                            expiredToken();
+                        } 
+                        else {
+                            getDashboard();
+                            getSettings();
+                        }
+                        
+                    }
+                    
+                });
+        }
+
+        function getDashboard() {
+            const token = localStorage.getItem('jwt');
+            axios.get('/api/dashboard', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then(res => {
+                if (res && res.data && res.data.success) {
+                    document.querySelector('h1.row').innerHTML = 'Dashboard';
+                    document.querySelector('main').innerHTML = res.data.myContent;
+                }
+            });
+        }
+
+        function getSettings() {
+            const token = localStorage.getItem('jwt');
+            axios.get('/api/settings', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then(res => {
+                if (res && res.data && res.data.success) {
+                    document.querySelector('h1.row').innerHTML = 'Settings';
+                    document.querySelector('main').innerHTML = res.data.myContent;
+                }
+            });
+        }
+
+        function expiredToken(req, res) {
+            if (!req.auth.admin) return login();
+            res.sendStatus(200);
+        }
+
+
+
+
+        var container = Array.from(document.getElementsByClassName('btn'));
+
+        function selectContainer (id) {
+            container.forEach( c => {
+                c.classList.toggle('selected', c.id === id);
+                document.getElementById(id).getAttribute('onclick');
+            });
+        }
+
+        container.forEach(c => {
+            let id = c.id;
+            c.addEventListener('click', e => {
+                history.pushState({id}, null, `./api/${id}`)
+                selectContainer(id);
+            });
+        });
+
+        // container.addEventListener('click', function(e) {
+        //     if (e.target != e.currentTarget) {
+        //         e.preventDefault();
+        //         history.pushState({id}, null, `./api/${id}`);
+        //         selectContainer(id);
+        //     }
+        //     e.stopPropagation();
+        // }, false);
+
+        window.addEventListener('popstate', e => {
+            if (e.state !== null){
+                selectContainer(e.state.id);
+            }
+            else {
+                selectContainer(null);
+            }
+        });
+
+
+    </script>
+
+</body>
+</html>
